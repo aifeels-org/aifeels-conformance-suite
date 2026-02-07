@@ -99,14 +99,15 @@ class ConformanceValidator:
                     state.process_event(event)
                 elif action == 'advance_time':
                     seconds = step['seconds']
-                    # Assuming implementation has advance_time or similar
-                    if hasattr(state, 'advance_time'):
-                        state.advance_time(seconds)
-                    else:
-                        # Calculate intervals and apply decay
-                        intervals = seconds // 300
-                        for _ in range(intervals):
-                            state.apply_decay()
+                    # Simulate time passage by manipulating last_decay_time
+                    from datetime import timedelta
+                    
+                    # Move last_decay_time back by the specified seconds
+                    # This simulates that much time has passed
+                    state._last_decay_time -= timedelta(seconds=seconds)
+                    
+                    # Now apply decay once - it will calculate based on elapsed time
+                    state.apply_decay()
                 elif action == 'get_recommended_action':
                     # Store for assertion checking
                     state._recommended_action = state.recommended_action()
