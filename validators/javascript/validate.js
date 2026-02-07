@@ -107,16 +107,14 @@ class ConformanceValidator {
           state.processEvent(step.event);
         } else if (action === 'advance_time') {
           const seconds = step.seconds;
-          // Try advance_time, otherwise fall back to apply_decay
-          if (typeof state.advanceTime === 'function') {
-            state.advanceTime(seconds);
-          } else {
-            // Calculate intervals and apply decay
-            const intervals = Math.floor(seconds / 300);
-            for (let i = 0; i < intervals; i++) {
-              state.applyDecay();
-            }
-          }
+          // Simulate time passage by manipulating lastDecayTime
+          
+          // Move lastDecayTime back by the specified seconds
+          // This simulates that much time has passed
+          state._lastDecayTime = new Date(state._lastDecayTime.getTime() - (seconds * 1000));
+          
+          // Now apply decay once - it will calculate based on elapsed time
+          state.applyDecay();
         } else if (action === 'get_recommended_action') {
           // Store for assertion checking
           state._recommendedAction = state.recommendedAction();
