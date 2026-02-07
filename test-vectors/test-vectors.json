@@ -1,0 +1,258 @@
+{
+  "version": "0.1.0",
+  "spec_version": "0.1.0",
+  "specification_url": "https://github.com/aifeels-org/aifeels-spec/blob/main/SPEC.md",
+  "description": "Official conformance test vectors for Aifeels v0.1.0",
+  "maintainer": "Aifeels Maintainers <hello@aifeels.org>",
+  "tests": [
+    {
+      "id": "conformance-1",
+      "name": "Initialization",
+      "spec_section": "3.4.2",
+      "description": "All primitives initialize to 0.0 with correct metadata",
+      "setup": {
+        "action": "initialize"
+      },
+      "steps": [],
+      "assertions": [
+        {"path": "frustration", "expected": 0.0, "type": "equals"},
+        {"path": "trust", "expected": 0.0, "type": "equals"},
+        {"path": "urgency", "expected": 0.0, "type": "equals"},
+        {"path": "stress", "expected": 0.0, "type": "equals"},
+        {"path": "caution", "expected": 0.0, "type": "equals"},
+        {"path": "metadata.trend", "expected": "stable", "type": "equals"},
+        {"path": "metadata.confidence", "expected": 1.0, "type": "equals"}
+      ]
+    },
+    {
+      "id": "conformance-2",
+      "name": "Event Application",
+      "spec_section": "4.2",
+      "description": "Events correctly update state with clamping",
+      "setup": {
+        "action": "initialize"
+      },
+      "steps": [
+        {"action": "process_event", "event": "task_failed"}
+      ],
+      "assertions": [
+        {"path": "frustration", "expected": 0.3, "type": "equals"},
+        {"path": "trust", "expected": 0.0, "type": "equals", "note": "Clamped from -0.1"}
+      ]
+    },
+    {
+      "id": "conformance-3",
+      "name": "Decay Calculation",
+      "spec_section": "5.1",
+      "description": "Linear decay at 0.05 per 300 seconds",
+      "setup": {
+        "action": "initialize",
+        "initial_state": {
+          "frustration": 0.5,
+          "trust": 0.0,
+          "urgency": 0.0,
+          "stress": 0.0,
+          "caution": 0.0
+        }
+      },
+      "steps": [
+        {"action": "advance_time", "seconds": 300, "note": "One 300-second interval"}
+      ],
+      "assertions": [
+        {"path": "frustration", "expected": 0.45, "type": "approximately", "tolerance": 0.001}
+      ]
+    },
+    {
+      "id": "conformance-4",
+      "name": "Action Selection",
+      "spec_section": "6.3",
+      "description": "Action selection follows precedence rules",
+      "setup": {
+        "action": "initialize",
+        "initial_state": {
+          "frustration": 0.75,
+          "trust": 0.0,
+          "urgency": 0.0,
+          "stress": 0.75,
+          "caution": 0.0
+        }
+      },
+      "steps": [
+        {"action": "get_recommended_action"}
+      ],
+      "assertions": [
+        {
+          "path": "recommended_action",
+          "expected": "cooldown_required",
+          "type": "equals",
+          "note": "frustration >= 0.75 AND stress >= 0.75 triggers cooldown"
+        }
+      ]
+    },
+    {
+      "id": "conformance-5",
+      "name": "Value Clamping Upper Bound",
+      "spec_section": "3.3",
+      "description": "Values clamp to maximum 1.0",
+      "setup": {
+        "action": "initialize",
+        "initial_state": {
+          "frustration": 0.9,
+          "trust": 0.0,
+          "urgency": 0.0,
+          "stress": 0.0,
+          "caution": 0.0
+        }
+      },
+      "steps": [
+        {"action": "process_event", "event": "task_failed"}
+      ],
+      "assertions": [
+        {
+          "path": "frustration",
+          "expected": 1.0,
+          "type": "equals",
+          "note": "0.9 + 0.3 = 1.2, clamped to 1.0"
+        }
+      ]
+    },
+    {
+      "id": "conformance-6",
+      "name": "Value Clamping Lower Bound",
+      "spec_section": "3.3",
+      "description": "Values clamp to minimum 0.0",
+      "setup": {
+        "action": "initialize",
+        "initial_state": {
+          "frustration": 0.0,
+          "trust": 0.05,
+          "urgency": 0.0,
+          "stress": 0.0,
+          "caution": 0.0
+        }
+      },
+      "steps": [
+        {"action": "process_event", "event": "task_failed"}
+      ],
+      "assertions": [
+        {
+          "path": "trust",
+          "expected": 0.0,
+          "type": "equals",
+          "note": "0.05 - 0.1 = -0.05, clamped to 0.0"
+        }
+      ]
+    },
+    {
+      "id": "conformance-7",
+      "name": "Multiple Event Processing",
+      "spec_section": "4.3",
+      "description": "Multiple events sum their effects correctly",
+      "setup": {
+        "action": "initialize"
+      },
+      "steps": [
+        {"action": "process_event", "event": "task_started"},
+        {"action": "process_event", "event": "tool_error"}
+      ],
+      "assertions": [
+        {
+          "path": "stress",
+          "expected": 0.2,
+          "type": "approximately",
+          "tolerance": 0.001,
+          "note": "task_started(0.1) + tool_error(0.1) = 0.2"
+        },
+        {
+          "path": "frustration",
+          "expected": 0.2,
+          "type": "approximately",
+          "tolerance": 0.001,
+          "note": "tool_error adds 0.2"
+        }
+      ]
+    },
+    {
+      "id": "conformance-8",
+      "name": "Decay Over Multiple Intervals",
+      "spec_section": "5.1",
+      "description": "Decay applies correctly over multiple 300-second intervals",
+      "setup": {
+        "action": "initialize",
+        "initial_state": {
+          "frustration": 1.0,
+          "trust": 0.0,
+          "urgency": 0.0,
+          "stress": 0.0,
+          "caution": 0.0
+        }
+      },
+      "steps": [
+        {"action": "advance_time", "seconds": 600, "note": "Two 300-second intervals"}
+      ],
+      "assertions": [
+        {
+          "path": "frustration",
+          "expected": 0.90,
+          "type": "approximately",
+          "tolerance": 0.001,
+          "note": "1.0 - (2 × 0.05) = 0.90"
+        }
+      ]
+    },
+    {
+      "id": "conformance-9",
+      "name": "Action Precedence - Handoff Over Pause",
+      "spec_section": "6.3",
+      "description": "handoff_to_human takes precedence over pause_execution",
+      "setup": {
+        "action": "initialize",
+        "initial_state": {
+          "frustration": 0.85,
+          "trust": 0.15,
+          "urgency": 0.0,
+          "stress": 0.70,
+          "caution": 0.0
+        }
+      },
+      "steps": [
+        {"action": "get_recommended_action"}
+      ],
+      "assertions": [
+        {
+          "path": "recommended_action",
+          "expected": "handoff_to_human",
+          "type": "equals",
+          "note": "frustration >= 0.80 (precedence 2) over trust < 0.20 (precedence 3)"
+        }
+      ]
+    },
+    {
+      "id": "conformance-10",
+      "name": "Action Precedence - Pause Over Confirm",
+      "spec_section": "6.3",
+      "description": "pause_execution takes precedence over request_confirmation",
+      "setup": {
+        "action": "initialize",
+        "initial_state": {
+          "frustration": 0.72,
+          "trust": 0.25,
+          "urgency": 0.0,
+          "stress": 0.82,
+          "caution": 0.0
+        }
+      },
+      "steps": [
+        {"action": "get_recommended_action"}
+      ],
+      "assertions": [
+        {
+          "path": "recommended_action",
+          "expected": "pause_execution",
+          "type": "equals",
+          "note": "stress >= 0.80 (precedence 3) over frustration >= 0.70 (precedence 4)"
+        }
+      ]
+    }
+  ]
+}
